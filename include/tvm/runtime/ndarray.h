@@ -30,6 +30,7 @@
 
 #include <atomic>
 #include <vector>
+#include <string>
 #include <utility>
 
 namespace tvm {
@@ -164,6 +165,7 @@ class NDArray : public ObjectRef {
   TVM_DLL std::vector<int64_t> Shape() const;
   // internal namespace
   struct Internal;
+  std::string name_hint;
 
  protected:
   friend class TVMPODValue_;
