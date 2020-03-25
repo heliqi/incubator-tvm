@@ -81,6 +81,11 @@ def _dimension_constraint():
 def _get_param(params, input_node):
     if isinstance(input_node, _expr.Constant):
         return np.atleast_1d(input_node.data.asnumpy())
+    elif isinstance(input_node, _expr.Call):
+        axes = _infer_value_simulated(input_node, params).asnumpy()
+        if len(axes.shape) > 1:
+            axes = axes.reshape((-1,))
+        return axes
     return params.pop(input_node.name_hint).asnumpy()
 
 def _get_num_param(params, input_node):
@@ -1600,6 +1605,27 @@ def _add_n():
         return  _res
     return _impl
 
+def _random_uniform():
+    def _impl(inputs, attr, params):
+        shape = _get_list_param(params, inputs[0])
+        seed = attr['seed']
+        seed2 = attr['seed2']
+        dtype = attr['dtype'].name
+
+        if seed != 0:
+            np.random.seed(seed)
+        elif seed2 !=0:
+            np.random.seed(seed2)
+        return np.random.random(size=shape).astype(dtype)
+
+    return _impl
+
+def _sparse_to_dense():
+    def _impl(inputs, attr, params):
+        print(inputs)
+        print(attr)
+        assert  0 == 1
+    return _impl
 
 # compatible operators that do NOT require any conversion.
 _identity_list = []
@@ -1752,6 +1778,8 @@ _convert_map = {
     'UnravelIndex'                      : _unravel_index(),
     'Where'                             : _where(),
     'ZerosLike'                         : AttrCvt('zeros_like'),
+    'RandomUniform'                     : _random_uniform(),
+    'SparseToDense'                     : _sparse_to_dense(),
 
 }
 

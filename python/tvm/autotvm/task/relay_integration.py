@@ -135,8 +135,10 @@ def extract_from_multiple_program(mods, params, target, target_host=None, ops=No
             # wrap build call in thread to avoid multiprocessing problems
             build_thread = threading.Thread(target=_lower,
                                             args=(mod, target, param))
+            old_stack_size = threading.stack_size(128*1024*1024)
             build_thread.start()
             build_thread.join()
+            threading.stack_size(old_stack_size)
 
         logger.disabled = old_state
 
