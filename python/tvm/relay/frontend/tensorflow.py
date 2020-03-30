@@ -27,7 +27,7 @@ import tvm
 
 from tvm.ir import IRModule
 from tvm.relay.prelude import Prelude
-from tvm.relay.analysis import structural_hash as s_hash
+from tvm.ir import structural_hash as s_hash
 
 from .. import analysis
 from .. import expr as _expr
@@ -81,12 +81,7 @@ def _dimension_constraint():
 def _get_param(params, input_node):
     if isinstance(input_node, _expr.Constant):
         return np.atleast_1d(input_node.data.asnumpy())
-    elif isinstance(input_node, _expr.Call):
-        axes = _infer_value_simulated(input_node, params).asnumpy()
-        if len(axes.shape) > 1:
-            axes = axes.reshape((-1,))
-        return axes
-    return params.pop(input_node.name_hint).asnumpy()
+    return params[input_node.name_hint].asnumpy()
 
 def _get_num_param(params, input_node):
     return _get_param(params, input_node).item()
@@ -1200,7 +1195,7 @@ def _stridedSlice():
                         #Tensorflow make axis with shrink_axis_mask as dimension 1
                         m_begin[final_index] = data_shape[final_index] + begin[index] \
                                                  if begin[index] < 0 else begin[index]
-                        m_end[final_index] = m_begin[final_index] + 1
+                        m_end[final_index] = begin[index] + 1
                         m_stride[final_index] = 1
                         fshape_indices.append(-2)
                     else:
@@ -1673,27 +1668,6 @@ def _add_n():
         return  _res
     return _impl
 
-def _random_uniform():
-    def _impl(inputs, attr, params):
-        shape = _get_list_param(params, inputs[0])
-        seed = attr['seed']
-        seed2 = attr['seed2']
-        dtype = attr['dtype'].name
-
-        if seed != 0:
-            np.random.seed(seed)
-        elif seed2 !=0:
-            np.random.seed(seed2)
-        return np.random.random(size=shape).astype(dtype)
-
-    return _impl
-
-def _sparse_to_dense():
-    def _impl(inputs, attr, params):
-        print(inputs)
-        print(attr)
-        assert  0 == 1
-    return _impl
 
 # compatible operators that do NOT require any conversion.
 _identity_list = []
@@ -1848,8 +1822,6 @@ _convert_map = {
     'UnravelIndex'                      : _unravel_index(),
     'Where'                             : _where(),
     'ZerosLike'                         : AttrCvt('zeros_like'),
-    'RandomUniform'                     : _random_uniform(),
-    'SparseToDense'                     : _sparse_to_dense(),
 
 }
 
