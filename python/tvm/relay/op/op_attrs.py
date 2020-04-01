@@ -338,3 +338,7 @@ class Conv2DTransposeAttrs(Attrs):
 @tvm._ffi.register_object("relay.attrs.SubPixelAttrs")
 class SubPixelAttrs(Attrs):
     """Attributes used in depth to space and space to depth operators"""
+
+@register_relay_attr_node
+class RandomUniformAttrs(Attrs):
+    """Attributes used in RandomUniform operators"""

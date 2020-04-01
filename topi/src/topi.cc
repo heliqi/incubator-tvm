@@ -70,6 +70,8 @@
 #include <topi/rocm/normalization.h>
 
 #include <topi/detail/tensor_utils.h>
+#include <topi/contrib/random.h>
+
 
 namespace topi {
 
@@ -473,6 +475,14 @@ TVM_REGISTER_GLOBAL("topi.one_hot")
   DataType dtype = args[5];
   *rv = one_hot(args[0], args[1], args[2], depth, axis, dtype);
   });
+
+TVM_REGISTER_GLOBAL("topi.random_uniform")
+.set_body([](TVMArgs args, TVMRetValue *rv) {
+  DataType dtype = args[3];
+  int seed = args[4];
+  std::string name = args[5];
+  *rv = topi::random_uniform(args[0], args[1], args[2], dtype, seed, name);
+});
 
 /* Ops from nn/bnn.h */
 TVM_REGISTER_GLOBAL("topi.nn.binarize_pack")
