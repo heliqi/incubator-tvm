@@ -321,6 +321,11 @@ class IRModule : public ObjectRef {
    * \return A Relay module.
    */
   TVM_DLL static IRModule FromText(const std::string& text, const std::string& source_path);
+
+  /*! \brief Declare the container type. */
+  using ContainerType = IRModuleNode;
+  // allow copy on write.
+  TVM_DEFINE_OBJECT_REF_COW_METHOD(IRModuleNode);
 };
 
 /*!
