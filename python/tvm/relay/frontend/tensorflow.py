@@ -1195,7 +1195,7 @@ def _stridedSlice():
                         #Tensorflow make axis with shrink_axis_mask as dimension 1
                         m_begin[final_index] = data_shape[final_index] + begin[index] \
                                                  if begin[index] < 0 else begin[index]
-                        m_end[final_index] = begin[index] + 1
+                        m_end[final_index] = m_begin[final_index] + 1
                         m_stride[final_index] = 1
                         fshape_indices.append(-2)
                     else:
@@ -1668,6 +1668,10 @@ def _add_n():
         return  _res
     return _impl
 
+def _random_uniform():
+    def _impl(inputs, attr, params, mod):
+        shape = _get_param(params, inputs[0])
+        return np.random.random(size=shape)
 
 # compatible operators that do NOT require any conversion.
 _identity_list = []
@@ -1822,6 +1826,7 @@ _convert_map = {
     'UnravelIndex'                      : _unravel_index(),
     'Where'                             : _where(),
     'ZerosLike'                         : AttrCvt('zeros_like'),
+    'RandomUniform'                     : _random_uniform(),
 
 }
 
