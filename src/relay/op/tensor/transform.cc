@@ -1858,7 +1858,7 @@ bool StridedSliceRel(const Array<Type>& types,
     int64_t slice_range, step;
     if (stride_v < 0) {
       if (end_v < -1) end_v = -1;
-      CHECK_LE(end_v, begin_v)
+      CHECK_LT(end_v, begin_v)
           << "strided_slice get empty slice at axis " << i;
       begin_v = std::min(dim_size - 1, begin_v);
       slice_range = begin_v - end_v;
@@ -1866,7 +1866,7 @@ bool StridedSliceRel(const Array<Type>& types,
     } else {
       if (begin_v < 0) begin_v = 0;
       CHECK_GE(stride_v, 0);
-      CHECK_LE(begin_v, end_v)
+      CHECK_LT(begin_v, end_v)
           << "strided_slice get empty slice at axis " << i;
       end_v = std::min(dim_size, end_v);
       slice_range = end_v - begin_v;
@@ -2732,64 +2732,6 @@ Example::
 .add_type_rel("UnRavelIndexRel", UnRavelIndexRel)
 .set_attr<FTVMCompute>("FTVMCompute", UnRavelIndexCompute)
 .set_attr<TOpPattern>("TOpPattern", kInjective);
-
-// randomuniform operator
-TVM_REGISTER_NODE_TYPE(RandomUniformAttrs);
-
-// Relation for RandomUniform
-bool RandomUniformRel(const Array<Type>& types,
-                      int num_inputs,
-                      const Attrs& raw_attrs,
-                      const TypeReporter& reporter) {
-  CHECK_EQ(types.size(), 3);
-  const RandomUniformAttrs* attrs = raw_attrs.as<RandomUniformAttrs>();
-  reporter->Assign(types[2], TensorType(attrs->shape, attrs->dtype));
-  return true;
-}
-
-// Compute description for RandomUniform
-Array<te::Tensor> RandomUniformCompute(const Attrs& attrs,
-                            const Array<te::Tensor>& inputs,
-                            const Type& out_type) {
-                            // const Target& target) {
-  const RandomUniformAttrs* param = attrs.as<RandomUniformAttrs>();
-  CHECK(param != nullptr);
-  return Array<te::Tensor> {
-    topi::random_uniform(param->shape, inputs[0](), inputs[1](), param->dtype,
-    param->seed, param->name)
-  };
-}
-
-// make call node for RandomUniform
-Expr MakeRandomUniform(Array<IndexExpr> shape,
-                       Expr minval,
-                       Expr maxval,
-                       DataType dtype,
-                       int seed,
-                       std::string name = "") {
-  auto attrs = make_object<RandomUniformAttrs>();
-  attrs->shape = std::move(shape);
-  attrs->dtype = std::move(dtype);
-  attrs->seed = seed;
-  attrs->name = std::move(name);
-  static const Op& op = Op::Get("random_uniform");
-  return CallNode::make(op, {minval, maxval}, Attrs(attrs), {});
-}
-
-TVM_REGISTER_GLOBAL("relay.op._make.random_uniform")
-.set_body_typed(MakeRandomUniform);
-
-RELAY_REGISTER_OP("random_uniform")
-.describe(R"code(Returns evenly spaced values within a given interval.
-)code" TVM_ADD_FILELINE)
-.set_attrs_type<RandomUniformAttrs>()
-.set_num_inputs(2)
-// .set_support_level(3)
-.add_type_rel("RandomUniform", RandomUniformRel)
-.set_attr<TOpPattern>("TOpPattern", kOpaque)
-.set_attr<FTVMCompute>("FTVMCompute", RandomUniformCompute);
-
-
 
 }  // namespace relay
 }  // namespace tvm
