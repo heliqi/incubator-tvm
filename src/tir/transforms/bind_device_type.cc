@@ -47,7 +47,8 @@ class DeviceTypeBinder: public StmtExprMutator {
         var_ = nullptr;
         std::ostringstream os;
         os << "device_type need to be " << device_type_;
-        return AssertStmtNode::make(op->value == value, os.str(), body);
+        return AssertStmtNode::make(op->value == value, tvm::tir::StringImmNode::make(os.str()),
+                                    body);
       }
     }
     return StmtExprMutator::VisitStmt_(op);
@@ -98,7 +99,7 @@ Pass BindDeviceType() {
     auto target = f->GetAttr<Target>(tvm::attr::kTarget);
     CHECK(target.defined())
         << "BindDeviceType: Require the target attribute";
-    n->body = DeviceTypeBinder(target->device_type)(std::move(n->body));
+    n->body = DeviceTypeBinder(target.value()->device_type)(std::move(n->body));
     return f;
   };
   return CreatePrimFuncPass(pass_func, 0, "tir.BindDeviceType", {});

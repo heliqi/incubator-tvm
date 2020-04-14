@@ -20,9 +20,7 @@ import tvm._ffi
 import tvm.ir
 
 from tvm.runtime import Object
-from tvm.ir import container
 from tvm.tir import Stmt
-from tvm.tir.stmt import LoweredFunc
 from . import _ffi_api
 
 
@@ -48,32 +46,28 @@ class DumpIR(object):
         def dump(*args, **kwargs):
             """dump function"""
             retv = func(*args, **kwargs)
-            if not isinstance(retv, (Stmt, LoweredFunc, container.Array)):
+            if not isinstance(retv, (Stmt,)):
                 return retv
             fname = func.func_name if hasattr(func, 'func_name') else func.__name__
             pname = str(self._pass_id) + "_" + fname + "_ir.cc"
             with open(pname, "a") as f:
-                out = retv.body if isinstance(retv, LoweredFunc) else retv
+                out = retv
                 f.write(str(out))
-                if isinstance(retv, container.Array):
-                    for x in retv:
-                        out = x.body if isinstance(x, LoweredFunc) else x
-                        f.write("---------%s\n%s\n-----------\n"%(x.name, str(out)))
                 self._pass_id += 1
             return retv
         return dump
 
     def decorate_irpass(self):
         """decorate ir_pass and ScheduleOps"""
-        self._old_sgpass = schedule.ScheduleOps
-        schedule.ScheduleOps = self.decorate(schedule.ScheduleOps)
-        vset = vars(ir_pass)
+        self._old_sgpass = tvm.te.schedule.ScheduleOps
+        tvm.te.schedule.ScheduleOps = self.decorate(tvm.te.schedule.ScheduleOps)
+        vset = vars(tvm.tir.ir_pass)
         k = v = 0
         def recover():
             vset[k] = v
         for k, v in vset.items():
             self._recover_list.append(recover)
-            vset[k] = self.decorate(v) if isinstance(v, Function) else v
+            vset[k] = self.decorate(v) if isinstance(v, tvm.runtime.PackedFunc) else v
 
     def decorate_custompass(self, custom_pass):
         """decorate given list of custom passes, and return decorated passes"""
@@ -99,7 +93,7 @@ class DumpIR(object):
         # recover decorated functions
         for f in self._recover_list:
             f()
-        schedule.ScheduleOps = self._old_sgpass
+        tvm.te.schedule.ScheduleOps = self._old_sgpass
         DumpIR.scope_level -= 1
 
 

@@ -293,6 +293,61 @@ def test_forward_multiply():
     verify_model(Multiply3().float().eval(), input_data=input_data)
     verify_model(Multiply4().float().eval(), input_data=input_data)
 
+def test_forward_reciprocal():
+    torch.set_grad_enabled(False)
+    input_shape = [2, 1, 10, 1, 10]
+    class Reciprocal1(Module):
+        def forward(self, *args):
+            return args[0].reciprocal()
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(Reciprocal1().float().eval(), input_data=input_data)
+
+def test_forward_repeat():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3]
+    class Repeat1(Module):
+        def forward(self, *args):
+            return args[0].repeat(1, 1)
+
+    class Repeat2(Module):
+        def forward(self, *args):
+            return args[0].repeat(4, 2)
+
+    class Repeat3(Module):
+        def forward(self, *args):
+            return args[0].repeat(4, 2, 1)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(Repeat1().float().eval(), input_data=input_data)
+    verify_model(Repeat2().float().eval(), input_data=input_data)
+    verify_model(Repeat3().float().eval(), input_data=input_data)
+
+def test_forward_repeat_interleave():
+    torch.set_grad_enabled(False)
+    input_shape = [2, 2, 3]
+    class RepeatInterleave1(Module):
+        def forward(self, *args):
+            return args[0].repeat_interleave(2)
+
+    class RepeatInterleave2(Module):
+        def forward(self, *args):
+            return args[0].repeat_interleave(3, dim=0)
+
+    class RepeatInterleave3(Module):
+        def forward(self, *args):
+            return args[0].repeat_interleave(2, dim=1)
+
+    class RepeatInterleave4(Module):
+        def forward(self, *args):
+            return args[0].repeat_interleave(4, dim=2)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(RepeatInterleave1().float().eval(), input_data=input_data)
+    verify_model(RepeatInterleave2().float().eval(), input_data=input_data)
+    verify_model(RepeatInterleave3().float().eval(), input_data=input_data)
+    verify_model(RepeatInterleave4().float().eval(), input_data=input_data)
+
 def test_forward_unsqueeze():
     torch.set_grad_enabled(False)
     input_shape = [10, 10]
@@ -319,6 +374,54 @@ def test_forward_squeeze():
     input_data = torch.rand(input_shape).float()
     verify_model(Squeeze1().float().eval(), input_data=input_data)
     verify_model(Squeeze2().float().eval(), input_data=input_data)
+
+def test_forward_arange():
+    torch.set_grad_enabled(False)
+
+    class Arange1(Module):
+        def forward(self, *args):
+            return torch.arange(5)
+    class Arange2(Module):
+        def forward(self, *args):
+            return torch.arange(2.5)
+    class Arange3(Module):
+        def forward(self, *args):
+            return torch.arange(1, 4)
+    class Arange4(Module):
+        def forward(self, *args):
+            return torch.arange(1, 2.5, 0.5)
+    class Arange5(Module):
+        def forward(self, *args):
+            return torch.arange(1, 2, 1, dtype=torch.int32)
+    class Arange6(Module):
+        def forward(self, *args):
+            return torch.arange(start=1, end=6, step=2)
+    class Arange7(Module):
+        def forward(self, *args):
+            return torch.arange(1, 4, dtype=torch.float32)
+    class Arange8(Module):
+        def forward(self, *args):
+            return torch.arange(1, 2, 1, dtype=torch.int16)
+
+    verify_model(Arange1().float().eval())
+    verify_model(Arange2().float().eval())
+    verify_model(Arange3().float().eval())
+    verify_model(Arange4().float().eval())
+    verify_model(Arange5().float().eval())
+    verify_model(Arange6().float().eval())
+    verify_model(Arange7().float().eval())
+    verify_model(Arange8().float().eval())
+
+def test_forward_abs():
+    torch.set_grad_enabled(False)
+    input_shape = [2, 1, 10, 1, 10]
+
+    class Abs1(Module):
+        def forward(self, *args):
+            return args[0].abs()
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(Abs1().float().eval(), input_data=input_data)
 
 def test_forward_concatenate():
     torch.set_grad_enabled(False)
@@ -353,15 +456,56 @@ def test_forward_prelu():
 
 def test_forward_leakyrelu():
     torch.set_grad_enabled(False)
-    input_shape = [10, 10]
+    input_shape = [1, 3, 10, 10]
     input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.LeakyReLU().eval(), input_data=input_data)
     verify_model(torch.nn.LeakyReLU(negative_slope=0.05).eval(), input_data=input_data)
+    verify_model(torch.nn.LeakyReLU(negative_slope=1.0).eval(), input_data=input_data)
+    verify_model(torch.nn.LeakyReLU(negative_slope=1.25).eval(), input_data=input_data)
 
 def test_forward_elu():
     torch.set_grad_enabled(False)
-    input_shape = [10, 10]
+    input_shape = [1, 3, 10, 10]
     input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.ELU().eval(), input_data=input_data)
+    verify_model(torch.nn.ELU(alpha=0.3).eval(), input_data=input_data)
+    verify_model(torch.nn.ELU(alpha=1.0).eval(), input_data=input_data)
     verify_model(torch.nn.ELU(alpha=1.3).eval(), input_data=input_data)
+
+def test_forward_celu():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+    input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.CELU().eval(), input_data=input_data)
+    verify_model(torch.nn.CELU(alpha=0.3).eval(), input_data=input_data)
+    verify_model(torch.nn.CELU(alpha=1.0).eval(), input_data=input_data)
+    verify_model(torch.nn.CELU(alpha=1.3).eval(), input_data=input_data)
+
+def test_forward_gelu():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+    input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.GELU().eval(), input_data=input_data)
+
+def test_forward_selu():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+    input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.SELU().eval(), input_data=input_data)
+
+def test_forward_softplus():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+    input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.Softplus().eval(), input_data=input_data)
+    verify_model(torch.nn.Softplus(beta=1.5, threshold=20).eval(), input_data=input_data)
+    verify_model(torch.nn.Softplus(beta=5, threshold=10).eval(), input_data=input_data)
+
+def test_forward_softsign():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+    input_data = torch.rand(input_shape).float()
+    verify_model(torch.nn.Softsign().eval(), input_data=input_data)
 
 def test_forward_log_sigmoid():
     torch.set_grad_enabled(False)
@@ -382,13 +526,13 @@ def test_forward_maxpool2d():
     input_data = torch.rand(input_shape).float()
 
     verify_model(torch.nn.MaxPool2d(kernel_size=[1, 1]).eval(),
-                input_data)
+                 input_data)
     verify_model(torch.nn.MaxPool2d(kernel_size=[10, 10]).eval(),
-                input_data)
+                 input_data)
     verify_model(torch.nn.MaxPool2d(kernel_size=[4, 4],
                                     padding=2,
                                     stride=2).eval(),
-                input_data)
+                 input_data)
 
 def test_forward_maxpool1d():
     torch.set_grad_enabled(False)
@@ -396,13 +540,13 @@ def test_forward_maxpool1d():
     input_data = torch.rand(input_shape).float()
 
     verify_model(torch.nn.MaxPool1d(kernel_size=1).eval(),
-                input_data)
+                 input_data)
     verify_model(torch.nn.MaxPool1d(kernel_size=10).eval(),
-                input_data)
-    verify_model( torch.nn.MaxPool1d(kernel_size=4,
+                 input_data)
+    verify_model(torch.nn.MaxPool1d(kernel_size=4,
                                     padding=2,
                                     stride=2).eval(),
-                input_data)
+                 input_data)
 
 def test_forward_maxpool3d():
     torch.set_grad_enabled(False)
@@ -410,13 +554,13 @@ def test_forward_maxpool3d():
     input_data = torch.rand(input_shape).float()
 
     verify_model(torch.nn.MaxPool3d(kernel_size=[1, 1, 1]).eval(),
-                input_data)
+                 input_data)
     verify_model(torch.nn.MaxPool3d(kernel_size=[10, 10, 10]).eval(),
-                input_data)
+                 input_data)
     verify_model(torch.nn.MaxPool3d(kernel_size=[4, 4, 4],
                                     padding=2,
                                     stride=2).eval(),
-                input_data)
+                 input_data)
 
 def test_forward_split():
     torch.set_grad_enabled(False)
@@ -433,13 +577,13 @@ def test_forward_split():
 
     input_data = torch.rand(input_shape).float()
     verify_model(Split(2, 0).float().eval(),
-                input_data=input_data)
+                 input_data=input_data)
     verify_model(Split(3, 1).float().eval(),
-                input_data=input_data)
+                 input_data=input_data)
     verify_model(Split(4, 1).float().eval(),
-                input_data=input_data)
+                 input_data=input_data)
     verify_model(Split([2, 3, 5], 1).float().eval(),
-                input_data=input_data)
+                 input_data=input_data)
 
 def test_forward_avgpool():
     torch.set_grad_enabled(False)
@@ -561,6 +705,33 @@ def test_forward_instancenorm():
                           (torch.nn.InstanceNorm3d(16), inp_3d)]:
         verify_model(ins_norm.eval(), input_data=inp)
 
+def test_forward_layernorm():
+    def init_weight(m):
+        torch.nn.init.normal_(m.weight, 0, 0.01)
+        torch.nn.init.normal_(m.bias, 0.02)
+
+    inp_2d = torch.rand((1, 16, 10, 10))
+    inp_3d = torch.rand((1, 16, 10, 10, 10))
+    for ln, inp in [(torch.nn.LayerNorm(10), inp_2d),
+                    (torch.nn.LayerNorm(10), inp_3d)]:
+        init_weight(ln.eval())
+        verify_model(ln.eval(), input_data=inp)
+
+def test_forward_reshape():
+    torch.set_grad_enabled(False)
+    input_shape = [2, 1, 10, 1, 10]
+    new_shape = [2, 1, 10, 10]
+    class Reshape1(Module):
+        def forward(self, *args):
+            return args[0].reshape(new_shape)
+
+    class Reshape2(Module):
+        def forward(self, *args):
+            return args[0].reshape([-1])
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(Reshape1().float().eval(), input_data=input_data)
+    verify_model(Reshape2().float().eval(), input_data=input_data)
 
 def test_forward_transpose():
     torch.set_grad_enabled(False)
@@ -1108,18 +1279,193 @@ def test_simple_rnn():
     verify_script_model(RNNLoop().eval(), [(10, 10, 4)])
 
 
+def test_forward_reduce_sum():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+
+    class ReduceSum1(Module):
+        def forward(self, *args):
+            return args[0].sum(1)
+
+    class ReduceSum2(Module):
+        def forward(self, *args):
+            return args[0].sum(dim=1, keepdim=False)
+
+    class ReduceSum3(Module):
+        def forward(self, *args):
+            return args[0].sum(dim=2, keepdim=True)
+
+    class ReduceSum4(Module):
+        def forward(self, *args):
+            return args[0].sum(dim=(2,3), keepdim=True)
+
+    class ReduceSum5(Module):
+        def forward(self, *args):
+            return args[0].sum(dim=(2,3), keepdim=False)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(ReduceSum1().float().eval(), input_data=input_data)
+    verify_model(ReduceSum2().float().eval(), input_data=input_data)
+    verify_model(ReduceSum3().float().eval(), input_data=input_data)
+    verify_model(ReduceSum4().float().eval(), input_data=input_data)
+    verify_model(ReduceSum5().float().eval(), input_data=input_data)
+
+
+def test_forward_reduce_prod():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+
+    class ReduceProd1(Module):
+        def forward(self, *args):
+            return args[0].prod(1)
+
+    class ReduceProd2(Module):
+        def forward(self, *args):
+            return args[0].prod(dim=1, keepdim=False)
+
+    class ReduceProd3(Module):
+        def forward(self, *args):
+            return args[0].prod(dim=2, keepdim=True)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(ReduceProd1().float().eval(), input_data=input_data)
+    verify_model(ReduceProd2().float().eval(), input_data=input_data)
+    verify_model(ReduceProd3().float().eval(), input_data=input_data)
+
+
+def test_forward_argmin():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+
+    class ArgMin1(Module):
+        def forward(self, *args):
+            return args[0].argmin(1)
+
+    class ArgMin2(Module):
+        def forward(self, *args):
+            return args[0].argmin(dim=1, keepdim=False)
+
+    class ArgMin3(Module):
+        def forward(self, *args):
+            return args[0].argmin(dim=2, keepdim=True)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(ArgMin1().float().eval(), input_data=input_data)
+    verify_model(ArgMin2().float().eval(), input_data=input_data)
+    verify_model(ArgMin3().float().eval(), input_data=input_data)
+
+
+def test_forward_argmax():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+
+    class ArgMax1(Module):
+        def forward(self, *args):
+            return args[0].argmax(1)
+
+    class ArgMax2(Module):
+        def forward(self, *args):
+            return args[0].argmax(dim=1, keepdim=False)
+
+    class ArgMax3(Module):
+        def forward(self, *args):
+            return args[0].argmax(dim=2, keepdim=True)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(ArgMax1().float().eval(), input_data=input_data)
+    verify_model(ArgMax2().float().eval(), input_data=input_data)
+    verify_model(ArgMax3().float().eval(), input_data=input_data)
+
+
+def test_forward_std():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+
+    class Std1(Module):
+        def forward(self, *args):
+            return args[0].std(1, unbiased=False)
+
+    class Std2(Module):
+        def forward(self, *args):
+            return args[0].std(dim=1, keepdim=False, unbiased=False)
+
+    class Std3(Module):
+        def forward(self, *args):
+            return args[0].std(dim=2, keepdim=True, unbiased=False)
+
+    class Std4(Module):
+        def forward(self, *args):
+            return args[0].std(dim=(2,3), keepdim=True, unbiased=False)
+
+    class Std5(Module):
+        def forward(self, *args):
+            return args[0].std(dim=(2,3), keepdim=False, unbiased=False)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(Std1().float().eval(), input_data=input_data)
+    verify_model(Std2().float().eval(), input_data=input_data)
+    verify_model(Std3().float().eval(), input_data=input_data)
+    verify_model(Std4().float().eval(), input_data=input_data)
+    verify_model(Std5().float().eval(), input_data=input_data)
+
+
+def test_forward_variance():
+    torch.set_grad_enabled(False)
+    input_shape = [1, 3, 10, 10]
+
+    class Variance1(Module):
+        def forward(self, *args):
+            return args[0].var(1, unbiased=False)
+
+    class Variance2(Module):
+        def forward(self, *args):
+            return args[0].var(dim=1, keepdim=False, unbiased=False)
+
+    class Variance3(Module):
+        def forward(self, *args):
+            return args[0].var(dim=2, keepdim=True, unbiased=False)
+
+    class Variance4(Module):
+        def forward(self, *args):
+            return args[0].var(dim=(2,3), keepdim=True, unbiased=False)
+
+    class Variance5(Module):
+        def forward(self, *args):
+            return args[0].var(dim=(2,3), keepdim=False, unbiased=False)
+
+    input_data = torch.rand(input_shape).float()
+    verify_model(Variance1().float().eval(), input_data=input_data)
+    verify_model(Variance2().float().eval(), input_data=input_data)
+    verify_model(Variance3().float().eval(), input_data=input_data)
+    verify_model(Variance4().float().eval(), input_data=input_data)
+    verify_model(Variance5().float().eval(), input_data=input_data)
+
+
 if __name__ == "__main__":
     # Single operator tests
     test_forward_add()
     test_forward_subtract()
     test_forward_multiply()
+    test_forward_reshape()
+    test_forward_reciprocal()
+    test_forward_repeat()
+    test_forward_repeat_interleave()
     test_forward_squeeze()
     test_forward_unsqueeze()
     test_forward_concatenate()
+    test_forward_reduce_sum()
+    test_forward_reduce_prod()
+    test_forward_argmin()
+    test_forward_argmax()
+    test_forward_std()
+    test_forward_variance()
     test_forward_relu()
     test_forward_prelu()
     test_forward_leakyrelu()
     test_forward_elu()
+    test_forward_celu()
+    test_forward_gelu()
+    test_forward_selu()
     test_forward_log_sigmoid()
     test_forward_adaptiveavgpool()
     test_forward_maxpool2d()
@@ -1132,11 +1478,14 @@ if __name__ == "__main__":
     test_forward_contiguous()
     test_forward_batchnorm()
     test_forward_instancenorm()
+    test_forward_layernorm()
     test_forward_transpose()
     test_forward_size()
     test_forward_view()
     test_forward_select()
     test_forward_clone()
+    test_forward_softplus()
+    test_forward_softsign()
     test_forward_logsoftmax()
     test_forward_sigmoid()
     test_forward_dense()
@@ -1147,6 +1496,8 @@ if __name__ == "__main__":
     test_forward_mean()
     test_forward_expand()
     test_forward_pow()
+    test_forward_abs()
+    test_forward_arange()
     test_forward_chunk()
     test_forward_split()
     test_upsample()
@@ -1180,3 +1531,8 @@ if __name__ == "__main__":
     # Test simple conditionals and loop
     test_control_flow()
     test_simple_rnn()
+
+    # More complex recurrent models
+    from lstm_test import custom_lstm_test
+
+    custom_lstm_test()

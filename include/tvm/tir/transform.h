@@ -56,7 +56,62 @@ TVM_DLL Pass CreatePrimFuncPass(const runtime::TypedPackedFunc<
                                 PrimFunc(PrimFunc, IRModule, PassContext)>& pass_func,
                                 int opt_level,
                                 const std::string& name,
-                                const tvm::Array<tvm::PrimExpr>& required);
+                                const tvm::Array<runtime::String>& required);
+
+/*!
+ * \brief Transform the high-level PrimFunc to a low-level version
+ *        that can be used as an API function.
+ *
+ *
+ *  The main task of this function is to create code to :
+ *   - Map the values in the api_args to Var that is required by body.
+ *   - Insert assertions to check type/value of the passed arguments.
+ *
+ * \param num_unpacked_args Number of arguments that
+ *         are processed in plain form instead of packed form.
+ *
+ * \note
+ *  The function signature have two cases
+ *
+ *  let num_packed_args = len(api_args) - num_unpacked_args;
+ *
+ *  if num_packed_args is zero:
+ *     f(api_arg_0, api_arg_1, .., api_arg_n) where n == len(api_args)
+ *
+ *  if num_packed_args is not zero:
+ *       f(TVMArg* packed_args, int* packed_arg_type_ids, int num_packed_args,
+ *         api_arg_k, api_arg_k+1, ... api_arg_n,
+ *         TVMValue* out_ret_val, int* out_ret_tcode)
+ *
+ *       where n == len(api_args), k == num_packed_args
+ *
+ * \return The pass.
+ */
+TVM_DLL Pass MakePackedAPI(int num_unpacked_args);
+
+
+/*!
+ * \brief Remap the thread axis
+ *
+ *  This can be used to get equivalent program which uses
+ *  threadIdx.y in place of threadIdx.x by passing
+ *  {"threadIdx.x": thread_axis("threadIdx.y")}
+ *
+ *
+ * \return The pass.
+ */
+TVM_DLL Pass RemapThreadAxis(Map<runtime::String, IterVar> axis_map);
+
+
+/*!
+ * \brief Lower custom datatypes.
+ *
+ * See tvm::datatypes::Registry for more information on adding custom datatypes.
+ *
+ * \return The pass.
+ */
+TVM_DLL Pass LowerCustomDatatypes();
+
 
 /*!
  * \brief Bind the device type ofthe function to be
@@ -142,11 +197,12 @@ TVM_DLL Pass CombineContextCall();
 /*!
  * \brief Narrow down PrimExpr datatype in stmt to target_bits.
  *
- * \note Run this pass after StorageFlatten.
+ * \param target_bits The target bits
  *
+ * \note Run this pass after storage flatten.
  * \return The pass.
  */
-TVM_DLL Pass NarrowDataType();
+TVM_DLL Pass NarrowDataType(int target_bits);
 
 }  // namespace transform
 }  // namespace tir

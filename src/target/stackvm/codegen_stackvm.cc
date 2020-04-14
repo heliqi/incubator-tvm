@@ -536,10 +536,10 @@ runtime::Module BuildStackVM(const IRModule& mod) {
     CHECK(kv.second->IsInstance<PrimFuncNode>())
         << "CodeGenStackVM: Can only take PrimFunc";
     auto f = Downcast<PrimFunc>(kv.second);
-    auto global_symbol = f->GetAttr<runtime::String>(tvm::attr::kGlobalSymbol);
+    auto global_symbol = f->GetAttr<String>(tvm::attr::kGlobalSymbol);
     CHECK(global_symbol.defined())
         << "CodeGenStackVM: Expect PrimFunc to have the global_symbol attribute";
-    std::string f_name = global_symbol;
+    std::string f_name = global_symbol.value();
     StackVM vm = codegen::CodeGenStackVM().Compile(f);
     CHECK(!fmap.count(f_name))
         << "Function name " << f_name << "already exist in list";

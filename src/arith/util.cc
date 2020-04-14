@@ -18,20 +18,36 @@
  */
 
 /*!
- * \file lowered_func.cc
+ * \file util.cc
+ * \brief The utils for arithmetic analysis.
  */
-#include <tvm/tir/lowered_func.h>
+#include <tvm/arith/util.h>
+#include <dmlc/logging.h>
 
 namespace tvm {
-namespace tir {
-TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
-.set_dispatch<LoweredFuncNode>([](const ObjectRef& node, ReprPrinter* p) {
-    auto* op = static_cast<const LoweredFuncNode*>(node.get());
-    p->stream << "LoweredFunc(" << op->name << ", " << op << ")";
-});
+namespace arith {
 
-TVM_REGISTER_NODE_TYPE(LoweredFuncNode);
+std::tuple<int64_t, int64_t, int64_t> xgcd(int64_t a, int64_t b) {
+  int64_t s = 0, old_s = 1;
+  int64_t t = 1, old_t = 0;
+  int64_t r = b, old_r = a;
 
+  while (r != 0) {
+    int64_t q = old_r / r;
+    std::swap(r, old_r);
+    r -= q * old_r;
+    std::swap(s, old_s);
+    s -= q * old_s;
+    std::swap(t, old_t);
+    t -= q * old_t;
+  }
 
-}  // namespace tir
+  CHECK_EQ(a % old_r, 0);
+  CHECK_EQ(b % old_r, 0);
+  CHECK(old_r == old_s*a + old_t*b);
+
+  return std::make_tuple(old_r, old_s, old_t);
+}
+
+}  // namespace arith
 }  // namespace tvm

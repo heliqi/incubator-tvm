@@ -219,13 +219,13 @@ class WarpAccessRewriter : protected StmtExprMutator {
   }
 
  protected:
-  PrimExpr Mutate_(const VarNode* op) {
+  PrimExpr VisitExpr_(const VarNode* op) override {
     CHECK(op != buffer_)
         << "Cannot access address of warp memory directly";
     return StmtExprMutator::VisitExpr_(op);
   }
 
-  Stmt VisitStmt_(const StoreNode* op) {
+  Stmt VisitStmt_(const StoreNode* op) override {
     if (op->buffer_var.get() == buffer_) {
       PrimExpr local_index, group;
       std::tie(local_index, group) = SplitIndexByGroup(op->index);
@@ -235,7 +235,7 @@ class WarpAccessRewriter : protected StmtExprMutator {
     }
   }
 
-  PrimExpr Mutate_(const LoadNode* op) {
+  PrimExpr VisitExpr_(const LoadNode* op) override {
     if (op->buffer_var.get() == buffer_) {
       PrimExpr local_index, group;
       std::tie(local_index, group) = SplitIndexByGroup(op->index);
@@ -393,7 +393,7 @@ Pass LowerWarpMemory() {
     auto target = f->GetAttr<Target>(tvm::attr::kTarget);
     CHECK(target.defined())
         << "LowerWarpMemory: Require the target attribute";
-    n->body = WarpMemoryRewriter(target->thread_warp_size).Rewrite(std::move(n->body));
+    n->body = WarpMemoryRewriter(target.value()->thread_warp_size).Rewrite(std::move(n->body));
     return f;
   };
   return CreatePrimFuncPass(pass_func, 0, "tir.LowerWarpMemory", {});
