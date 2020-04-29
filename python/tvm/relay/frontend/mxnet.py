@@ -853,7 +853,6 @@ def _mx_smooth_l1(inputs, attrs):
 
 def _mx_deformable_convolution(inputs, attrs):
     new_attrs = {}
-    assert attrs.get_bool("no_bias")
     new_attrs["kernel_size"] = attrs.get_int_tuple("kernel")
     new_attrs["strides"] = attrs.get_int_tuple("stride")
     new_attrs["padding"] = attrs.get_int_tuple("pad")
@@ -1072,6 +1071,20 @@ def _mx_one_hot(inputs, attrs):
     on_value = tvm.relay.const(attrs.get_float('on_value', 1.0), dtype)
     off_value = tvm.relay.const(attrs.get_float('off_value', 0.0), dtype)
     return _op.one_hot(indices, on_value, off_value, depth, -1, dtype)
+
+
+def _mx_depth_to_space(inputs, attrs):
+    assert len(inputs) == 1
+    new_attrs = {}
+    new_attrs["block_size"] = attrs.get_int("block_size")
+    return _op.nn.depth_to_space(*inputs, **new_attrs)
+
+
+def _mx_space_to_depth(inputs, attrs):
+    assert len(inputs) == 1
+    new_attrs = {}
+    new_attrs["block_size"] = attrs.get_int("block_size")
+    return _op.nn.space_to_depth(*inputs, **new_attrs)
 
 
 def _mx_contrib_fifo_buffer(inputs, attrs):
@@ -1738,6 +1751,12 @@ _convert_map = {
     "broadcast_greater_equal": _mx_compare(_op.greater_equal, _rename),
     "broadcast_lesser"       : _mx_compare(_op.less, _rename),
     "broadcast_lesser_equal" : _mx_compare(_op.less_equal, _rename),
+    "_equal"                 : _mx_compare(_op.equal, _rename),
+    "_not_equal"             : _mx_compare(_op.not_equal, _rename),
+    "_greater"               : _mx_compare(_op.greater, _rename),
+    "_greater_equal"         : _mx_compare(_op.greater_equal, _rename),
+    "_lesser"                : _mx_compare(_op.less, _rename),
+    "_lesser_equal"          : _mx_compare(_op.less_equal, _rename),
     "elemwise_add"           : _rename(_op.add),
     "elemwise_sub"           : _rename(_op.subtract),
     "elemwise_mul"           : _rename(_op.multiply),
@@ -1855,6 +1874,8 @@ _convert_map = {
     "make_loss"     : _mx_make_loss,
     "_contrib_div_sqrt_dim": _mx_contrib_div_sqrt_dim,
     "one_hot"           : _mx_one_hot,
+    "depth_to_space"    : _mx_depth_to_space,
+    "space_to_depth"    : _mx_space_to_depth,
     # vision
     "_contrib_BilinearResize2D" : _mx_resize,
     "_contrib_MultiBoxPrior" : _mx_multibox_prior,
