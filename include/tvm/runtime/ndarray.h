@@ -54,8 +54,7 @@ class NDArray : public ObjectRef {
    * \brief constructor.
    * \param data ObjectPtr to the data container.
    */
-  explicit NDArray(ObjectPtr<Object> data)
-      : ObjectRef(data) {}
+  explicit NDArray(ObjectPtr<Object> data) : ObjectRef(data) {}
 
   /*! \brief reset the content of NDArray to be nullptr */
   inline void reset();
@@ -77,13 +76,13 @@ class NDArray : public ObjectRef {
   inline void CopyFrom(const DLTensor* other);
   inline void CopyFrom(const NDArray& other);
   /*!
- * \brief Copy data content from a byte buffer.
- * \param data The source bytes to be copied from.
- * \param nbytes The size of the buffer in bytes
- *        Must be equal to the size of the NDArray.
- * \note The copy may happen asynchronously if it involves a GPU context.
- *       TVMSynchronize is necessary.
- */
+   * \brief Copy data content from a byte buffer.
+   * \param data The source bytes to be copied from.
+   * \param nbytes The size of the buffer in bytes
+   *        Must be equal to the size of the NDArray.
+   * \note The copy may happen asynchronously if it involves a GPU context.
+   *       TVMSynchronize is necessary.
+   */
   TVM_DLL void CopyFromBytes(const void* data, size_t nbytes);
   /*!
    * \brief Copy data content into another array.
@@ -125,8 +124,7 @@ class NDArray : public ObjectRef {
    * \param dtype The data type of the new array.
    * \note The memory size of new array must be smaller than the current one.
    */
-  TVM_DLL NDArray CreateView(
-      std::vector<int64_t> shape, DLDataType dtype);
+  TVM_DLL NDArray CreateView(std::vector<int64_t> shape, DLDataType dtype);
   /*!
    * \brief Create a reference view of NDArray that
    *  represents as DLManagedTensor.
@@ -140,9 +138,7 @@ class NDArray : public ObjectRef {
    * \param ctx The context of the Array.
    * \return The created Array
    */
-  TVM_DLL static NDArray Empty(std::vector<int64_t> shape,
-                               DLDataType dtype,
-                               DLContext ctx);
+  TVM_DLL static NDArray Empty(std::vector<int64_t> shape, DLDataType dtype, DLContext ctx);
   /*!
    * \brief Create a NDArray backed by a dlpack tensor.
    *
@@ -161,8 +157,8 @@ class NDArray : public ObjectRef {
    * \param to The target array.
    * \param stream The stream used in copy.
    */
-  TVM_DLL static void CopyFromTo(
-      const DLTensor* from, DLTensor* to, TVMStreamHandle stream = nullptr);
+  TVM_DLL static void CopyFromTo(const DLTensor* from, DLTensor* to,
+                                 TVMStreamHandle stream = nullptr);
 
   TVM_DLL std::vector<int64_t> Shape() const;
   // internal namespace
