@@ -747,6 +747,17 @@ def _test_reshape_like(data, shape_like):
 
         compare_tf_with_tvm(data, 'Placeholder:0', 'Reshape:0')
 
+def _test_reshape_symbolic(data, a_data, b_data):
+    with tf.Graph().as_default():
+        in_data = array_ops.placeholder(shape=data.shape, dtype=data.dtype)
+        a = array_ops.placeholder(shape=a_data.shape, dtype=a_data.dtype)
+        b = array_ops.placeholder(shape=b_data.shape, dtype=b_data.dtype)
+        newshape = tf.add(a, b)
+        out = array_ops.reshape(in_data, newshape)
+
+        for mode in ["debug", "vm"]:
+            compare_tf_with_tvm([data, a_data, b_data], [in_data.name, a.name, b.name], out.name, mode=mode)
+
 def test_forward_reshape():
     _test_reshape(np.arange(6.0), [2, 3])
     _test_reshape(np.arange(6), [-1, 2])
@@ -754,6 +765,10 @@ def test_forward_reshape():
     _test_reshape(np.arange(6), [-1])
     _test_reshape_with_call()
     _test_reshape_like(np.zeros((3, 6)), np.zeros((9, 2)))
+    _test_reshape_symbolic(np.arange(6.0), np.array([2, 0]), np.array([0, 3]))
+    _test_reshape_symbolic(np.arange(6), np.array([-1, 0]), np.array([0, 2]))
+    _test_reshape_symbolic(np.arange(6), np.array([3, 0]), np.array([3, -1]))
+    _test_reshape_symbolic(np.arange(6), np.array([0]), np.array([-1]))
 
 #######################################################################
 # DepthToSpace
@@ -1364,7 +1379,7 @@ def test_forward_truncatemod():
 
 
 #######################################################################
-# Gather, GatherV2, GatherNd
+# Gather, GatherV2
 # --------------------------
 
 def _test_gather(ip_shape, indice_shape, indice_value, axis, dtype):
@@ -1403,16 +1418,32 @@ def test_forward_gather():
     _test_gather((3, 3, 3), (1, 1, 2), [[[1, 0]]], 2, 'int32')
     _test_gather((4, 3, 5, 6), (1, 4), [[2, 1, 0, 0]], 0, 'float32')
 
+#######################################################################
+# GatherND
+# --------------------------
+
+def _test_gather_nd(ip_shape, indice_value, dtype):
+    """test operator GatherNd"""
+    np_data = np.random.uniform(1, 100, size=ip_shape).astype(dtype)
+    tf.reset_default_graph()
+    with tf.Graph().as_default():
+        in_data = tf.placeholder(dtype, ip_shape, name="in_data")
+        tf.gather_nd(in_data, indices=indice_value, name="gather_nd")
+        compare_tf_with_tvm([np_data], ['in_data:0'], 'gather_nd:0')
 
 def test_forward_gather_nd():
     """test operator GatherNd"""
-    np_data = np.random.uniform(1, 100, size=(2, 2, 2)).astype(np.float32)
-    tf.reset_default_graph()
-    with tf.Graph().as_default():
-        in_data = tf.placeholder(tf.float32, (2, 2, 2), name="in_data")
-        tf.gather_nd(in_data, indices=[[1, 0, 0], [0, 0, 0]], name="gather_nd")
-        compare_tf_with_tvm([np_data], ['in_data:0'], 'gather_nd:0')
-
+    _test_gather_nd((2, 2), [[0, 0], [1, 1]], 'float32')
+    _test_gather_nd((2, 2, 2), [[1, 0, 0], [0, 0, 0]], 'float32')
+    _test_gather_nd((4,), [1], 'float32')
+    _test_gather_nd((4,), [1], 'int32')
+    _test_gather_nd((1, 4), [0, 3], 'int32')
+    _test_gather_nd((2, 2), [[[1, 0], [0, 1]]], 'int32')
+    _test_gather_nd((2, 2), [[[1, 0], [0, 1]]], 'float32')
+    _test_gather_nd((3, 3, 3),  [[[1, 0]]], 'int32')
+    _test_gather_nd((3, 3, 3), [[[1, 0]]], 'int32')
+    _test_gather_nd((4, 3, 5, 6),  [[2, 1, 0, 0]], 'float32')
+    _test_gather_nd((3, 3, 3), [[[2, 1]]], 'int32')
 
 #######################################################################
 # BiasAdd

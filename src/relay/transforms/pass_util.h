@@ -77,6 +77,20 @@ Type TypeSubst(const Type& type, const tvm::Map<TypeVar, Type>& subst_map);
 Expr TypeSubst(const Expr& expr, const tvm::Map<TypeVar, Type>& subst_map);
 
 /*!
+ * \brief Check if type is dynamic.
+ * \param ty The type to be checked.
+ * \return Whether the type is dynamic.
+ */
+bool IsDynamic(const Type& ty);
+
+/*!
+ * \brief Check if call is data dependant.
+ * \param call The call to be checked.
+ * \return Whether the call is data dependant.
+ */
+bool IsDataDependant(const CallNode* call);
+
+/*!
  * \brief Make arbitrary transformation preserve the out most function.
  * \param func The transformation.
  * \param e The expression
@@ -99,6 +113,26 @@ inline Expr TransformF(const std::function<Expr(const Expr&)>& func, const Expr&
  */
 inline bool IsAtomic(const Expr& e) {
   return e.as<VarNode>() || e.as<OpNode>() || e.as<ConstructorNode>() || e.as<GlobalVarNode>();
+}
+
+/*!
+ * \brief Cache the compiler_begin annotation op to reduce registry lookup overhead
+ * \param void
+ * \return compiler_begin op
+ */
+inline const Op& CompilerBeginOp() {
+  static Op op = Op::Get("annotation.compiler_begin");
+  return op;
+}
+
+/*!
+ * \brief Cache the compiler_end annotation op to reduce registry lookup overhead
+ * \param void
+ * \return compiler_end op
+ */
+inline const Op& CompilerEndOp() {
+  static Op op = Op::Get("annotation.compiler_end");
+  return op;
 }
 
 template <typename ConditionObjectPtr>

@@ -27,6 +27,7 @@
 #include <tvm/relay/analysis.h>
 #include <tvm/relay/expr_functor.h>
 #include <tvm/relay/op.h>
+#include <tvm/relay/op_attr_types.h>
 #include <tvm/relay/pattern_functor.h>
 
 #include "../transforms/pass_util.h"
@@ -337,13 +338,13 @@ bool IsNDArrayAllGreaterEqual(const runtime::NDArray& tensor, T value) {
   return true;
 }
 
-// Cache the operators that are checked recursively to reduce lookup overhead.
-static const auto& expand_dims_op = Op::Get("expand_dims");
-static const auto& reshape_op = Op::Get("reshape");
-static const auto& transpose_op = Op::Get("transpose");
-static const auto& squeeze_op = Op::Get("squeeze");
-
 bool IsAllPositiveConstant(const Expr& expr) {
+  // Cache the operators that are checked recursively to reduce lookup overhead.
+  static const auto& expand_dims_op = Op::Get("expand_dims");
+  static const auto& reshape_op = Op::Get("reshape");
+  static const auto& transpose_op = Op::Get("transpose");
+  static const auto& squeeze_op = Op::Get("squeeze");
+
   // peel through a few common transform ops.
   if (const auto* constant = expr.as<ConstantNode>()) {
     const auto& tensor = constant->data;
@@ -414,5 +415,44 @@ Expr TypeSubst(const Expr& expr, const tvm::Map<TypeVar, Type>& subst_map) {
   return ret;
 }
 
+struct IsDynamicVisitor : public TypeVisitor {
+  bool is_dyn{false};
+  void VisitType_(const TensorTypeNode* tt) {
+    for (auto dim : tt->shape) {
+      if (dim.as<Any>()) {
+        is_dyn = true;
+        break;
+      }
+    }
+  }
+};
+
+bool IsDynamic(const Type& ty) {
+  IsDynamicVisitor v;
+  v.VisitType(ty);
+  return v.is_dyn;
+}
+
+TVM_REGISTER_GLOBAL("relay.ir.IsDynamic").set_body_typed(IsDynamic);
+
+bool IsDataDependant(const CallNode* call) {
+  static auto tshape_data_dependant = Op::GetAttrMap<TShapeDataDependant>("TShapeDataDependant");
+  Op op = Downcast<Op>(call->op);
+
+  if (!tshape_data_dependant.count(op)) {
+    return false;
+  }
+
+  if (op->name == "reshape") {
+    if (const auto* attrs = call->attrs.as<ReshapeAttrs>()) {
+      if (attrs->newshape) {
+        // If newshape attribute exists, it isn't data dependant.
+        return false;
+      }
+    }
+  }
+
+  return tshape_data_dependant[op];
+}
 }  // namespace relay
 }  // namespace tvm

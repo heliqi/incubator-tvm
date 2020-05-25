@@ -82,7 +82,7 @@ struct TransposeAttrs : public tvm::AttrsNode<TransposeAttrs> {
 
 /*! \brief Attributes used in reshape operators */
 struct ReshapeAttrs : public tvm::AttrsNode<ReshapeAttrs> {
-  Array<Integer> newshape;
+  Optional<Array<Integer>> newshape;
   bool reverse;
   TVM_DECLARE_ATTRS(ReshapeAttrs, "relay.attrs.ReshapeAttrs") {
     TVM_ATTR_FIELD(newshape).describe(
@@ -188,7 +188,7 @@ struct SqueezeAttrs : public tvm::AttrsNode<SqueezeAttrs> {
             "If `axis = None`, all axis of dimension 1 get squeezed;"
             "Else, the dimension in axes get squeezed."
             "It is an error if an axis does not has dimension 1.")
-        .set_default(NullValue<Array<Integer> >());
+        .set_default(NullValue<Array<Integer>>());
   }
 };  // struct SqueezeAttrs
 
