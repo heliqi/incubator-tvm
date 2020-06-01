@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 """The Relay Pattern Language and tooling."""
-from tvm.relay import Expr
+from tvm.relay.expr import RelayExpr as Expr
 import tvm._ffi
 from ...ir.base import Node
 from ...ir import make_node
@@ -318,17 +318,24 @@ class VarPattern(DFPattern):
     Parameters
     ----------
     name_hint: str
-        The name of the variable.
-        This name only acts as a hint, and is not used
-        for equality.
+        The name of the variable. Optional, if not provided,
+        the pattern will match any VarNode.
 
     type_annotation: tvm.relay.Type, optional
         The type annotation on the variable.
     """
 
-    def __init__(self, name_hint: str, type_annotation=None):
+    def __init__(self, name_hint="", type_annotation=None):
         self.__init_handle_by_constructor__(
             ffi.VarPattern, name_hint, type_annotation)
+
+
+@register_df_node
+class ConstantPattern(DFPattern):
+    """A pattern matching a Relay Constant.
+    """
+    def __init__(self):
+        self.__init_handle_by_constructor__(ffi.ConstantPattern)
 
 
 @register_df_node

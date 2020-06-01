@@ -56,6 +56,7 @@ class DFPatternMatcher : public DFPatternFunctor<bool(const DFPattern&, const Ex
   bool VisitDFPattern_(const TuplePatternNode* op, const Expr& expr) override;
   bool VisitDFPattern_(const TypePatternNode* op, const Expr& expr) override;
   bool VisitDFPattern_(const VarPatternNode* op, const Expr& expr) override;
+  bool VisitDFPattern_(const ConstantPatternNode* op, const Expr& expr) override;
   bool VisitDFPattern_(const WildcardPatternNode* op, const Expr& expr) override;
 
   void ClearMap(size_t watermark);
@@ -158,7 +159,7 @@ bool DFPatternMatcher::VisitDFPattern_(const AttrPatternNode* attr_pattern, cons
   } else if (auto* op = expr.as<FunctionNode>()) {
     matches = true;
     for (auto kv : attributes) {
-      if (matches && op->attrs->dict.count(kv.first)) {
+      if (matches && op->attrs.defined() && op->attrs->dict.count(kv.first)) {
         matches &= StructuralEqual()(kv.second, op->attrs->dict[kv.first]);
       } else {
         matches = false;
@@ -394,6 +395,10 @@ bool DFPatternMatcher::VisitDFPattern_(const VarPatternNode* op, const Expr& exp
   return matches;
 }
 
+bool DFPatternMatcher::VisitDFPattern_(const ConstantPatternNode* op, const Expr& expr) {
+  return expr.as<ConstantNode>() != nullptr;
+}
+
 bool DFPatternMatcher::VisitDFPattern_(const WildcardPatternNode* op, const Expr& expr) {
   return true;
 }
@@ -456,7 +461,7 @@ class PatternGrouper {
       size_t index = i - 1;
       Expr current = matcher_->expr_graph_.topological_order_.at(index)->ref_;
       if (auto op = current.as<FunctionNode>()) {
-        if (op->attrs->dict.count(attr::kPartitionedFromPattern) != 0) {
+        if (op->attrs.defined() && op->attrs->dict.count(attr::kPartitionedFromPattern) != 0) {
           pre_partitioned.insert(current);
           PostOrderVisit(op->body,
                          [&pre_partitioned](const Expr& expr) { pre_partitioned.insert(expr); });
@@ -557,7 +562,7 @@ class PatternGrouper {
           auto matches = node_map[node->ref_];
           for (auto match : matches) {
             if (fuzzy_matches.count(match) == 0 && match.as<OpNode>() == nullptr &&
-                match.as<FunctionNode>() == nullptr && match.as<ConstantNode>() == nullptr) {
+                match.as<FunctionNode>() == nullptr && !EmbedConst(match, node->ref_)) {
               inputs[match] = Var(
                   "FunctionVar_" + std::to_string(graph_number_) + "_" + std::to_string(var_number),
                   NullValue<Type>());
@@ -608,6 +613,36 @@ class PatternGrouper {
     CHECK_EQ(groups_[gid_].gid, gid_);
   }
 
+  /* \brief EmbedConst implements rules for embedding constants into partitioned functions or
+   * lifting them into the function arguments.
+   *
+   * The rules depend on what pattern the ConstantNode matched.
+   *
+   * The basic rules are:
+   *  If the constant matches ExprPattern(relay.const(*)) or a ConstantPattern(), embed the constant
+   * in the partitioned function. If the constant matched an AltPattern, recursively check the
+   * matched side of the pattern. For any other matching pattern (i.e, wildcard, VarPattern, etc),
+   * lift the constant into the arguments of the partitioned function.
+   */
+  bool EmbedConst(const Expr& expr, const DFPattern pattern) {
+    bool embed = false;
+    if (expr.as<ConstantNode>()) {
+      if (pattern.as<ConstantPatternNode>() != nullptr) {
+        embed = true;
+      } else if (auto expr_pat = pattern.as<ExprPatternNode>()) {
+        if (expr_pat->expr.as<ConstantNode>()) {
+          embed = true;
+        }
+      } else if (auto alt_pat = pattern.as<AltPatternNode>()) {
+        if (matcher_->Match(alt_pat->left, expr)) {
+          embed = EmbedConst(expr, alt_pat->left);
+        } else {
+          embed = EmbedConst(expr, alt_pat->right);
+        }
+      }
+    }
+    return embed;
+  }
   // Internal State
   DFPattern pattern_;
   std::vector<Group> groups_;

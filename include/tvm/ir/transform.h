@@ -92,9 +92,6 @@ class PassContextNode : public Object {
   /*! \brief The default optimization level. */
   int opt_level{2};
 
-  /*! \brief CPU is the default fallback device for heterogeneous execution. */
-  int fallback_device{static_cast<int>(kDLCPU)};
-
   /*! \brief The list of required passes. */
   Array<String> required_pass;
   /*! \brief The list of disabled passes. */
@@ -139,7 +136,6 @@ class PassContextNode : public Object {
 
   void VisitAttrs(AttrVisitor* v) {
     v->Visit("opt_level", &opt_level);
-    v->Visit("fallback_device", &fallback_device);
     v->Visit("required_pass", &required_pass);
     v->Visit("disabled_pass", &disabled_pass);
     v->Visit("config", &config);
@@ -157,7 +153,6 @@ class PassContextNode : public Object {
  *
  *  auto new_ctx = PassContext::Create();
  *  ctx->opt_level = 2;
- *  ctx->fallback_device = kDLCPU;
  *  With<PassContext> scope(ctx);
  *  // pass context in effect.
  *
@@ -208,10 +203,11 @@ class PassContext : public ObjectRef {
    * \brief Register a valid configuration option and its ValueType for validation.
    *
    * \param key The configuration key.
-   * \tparam ValueNodeType The value type to be registered
+   * \tparam ValueType The value type to be registered
    */
-  template <typename ValueNodeType>
+  template <typename ValueType>
   static uint32_t RegisterConfigOption(const char* key) {
+    using ValueNodeType = typename ValueType::ContainerType;
     // NOTE: we could further update the function later.
     uint32_t tindex = ValueNodeType::_GetOrAllocRuntimeTypeIndex();
     RegisterConfigOption(key, tindex);
