@@ -501,6 +501,20 @@ class MatMul(OnnxOpConverter):
         return _op.nn.dense(inputs[0], input_1_t)
 
 
+class Mod(OnnxOpConverter):
+    """ Operator converter for Mod.
+    """
+
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        assert len(inputs) == 2, "Mod op take 2 inputs, {} given".format(len(inputs))
+        if attr['fmod'] == 1:
+            op_name = "floor_mod"
+        else:
+            op_name = "mod"
+        return AttrCvt(op_name)(inputs, {}, params)
+
+
 class MaxPool(Pool):
     """ Operator converter for MaxPool
     """
@@ -1163,6 +1177,72 @@ class ReduceLogSumExp(Reduce):
     """
     name = 'logsumexp'
 
+
+class ReduceSumSquare(OnnxOpConverter):
+    """ Operator converter for ReduceSumSquare.
+    """
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        if 'axes' in attr:
+            axis = attr.get('axes', 0)
+        else:
+            axis_len = len(infer_shape(inputs[0]))
+            axis = list(range(axis_len))
+        attr = {'axis': axis, 'keepdims': attr.get('keepdims', True)}
+        inputs[0] = inputs[0] * inputs[0]
+
+        return AttrCvt("sum")(inputs, attr)
+
+
+class ReduceL1(OnnxOpConverter):
+    """ Operator converter for ReduceL1.
+    """
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        if 'axes' in attr:
+            axis = attr.get('axes', 0)
+        else:
+            axis_len = len(infer_shape(inputs[0]))
+            axis = list(range(axis_len))
+        attr = {'axis': axis, 'keepdims': attr.get('keepdims', True)}
+        inputs[0] = _op.abs(inputs[0])
+
+        return AttrCvt("sum")(inputs, attr)
+
+
+class ReduceL2(OnnxOpConverter):
+    """ Operator converter for ReduceL2.
+    """
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        if 'axes' in attr:
+            axis = attr.get('axes', 0)
+        else:
+            axis_len = len(infer_shape(inputs[0]))
+            axis = list(range(axis_len))
+        attr = {'axis': axis, 'keepdims': attr.get('keepdims', True)}
+        inputs[0] = inputs[0] * inputs[0]
+        out = AttrCvt("sum")(inputs, attr)
+
+        return _op.sqrt(out)
+
+
+class ReduceLogSum(OnnxOpConverter):
+    """ Operator converter for ReduceLogSum.
+    """
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        if 'axes' in attr:
+            axis = attr.get('axes', 0)
+        else:
+            axis_len = len(infer_shape(inputs[0]))
+            axis = list(range(axis_len))
+        attr = {'axis': axis, 'keepdims': attr.get('keepdims', True)}
+        out = AttrCvt("sum")(inputs, attr)
+
+        return _op.log(out)
+
+
 class ArgMax(OnnxOpConverter):
     """ Operator converter for ArgMax.
     """
@@ -1594,8 +1674,23 @@ class TopK(OnnxOpConverter):
         return _op.topk(inputs[0], k=K, axis=axis)
 
 
+class MaxRoiPool(OnnxOpConverter):
+    """Operator converter for MaxRoiPool.
+    """
+    @classmethod
+    def _impl_v1(cls, inputs, attr, params):
+        assert len(inputs) == 2, "MMaxRoiPool op take 2 inputs, {} given".format(len(inputs))
+
+        data = inputs[0]
+        rois = inputs[1]
+        pooled_shape = attr.get("pooled_shape")
+        spatial_scale = attr.get("spatial_scale", 1.0)
+
+        return _vision.roi_pool(data, rois, pooled_shape, spatial_scale)
+
+
 class RoiAlign(OnnxOpConverter):
-    """Operator converter for TopK
+    """Operator converter for RoiAlign.
     """
     @classmethod
     def _impl_v1(cls, inputs, attr, params):
@@ -1712,6 +1807,8 @@ def _get_convert_map(opset):
         'SoftPlus': SoftPlus.get_converter(opset),
         'Gemm': Gemm.get_converter(opset),
         'MatMul': MatMul.get_converter(opset),
+        'Mod': Mod.get_converter(opset),
+        'Xor': Renamer('logical_xor'),
 
         # defs/nn
         'AveragePool': AveragePool.get_converter(opset),
@@ -1731,6 +1828,7 @@ def _get_convert_map(opset):
         'LSTM': LSTM.get_converter(opset),
 
         # defs/vision
+        'MaxRoiPool': MaxRoiPool.get_converter(opset),
         'RoiAlign': RoiAlign.get_converter(opset),
 
         # defs/reduction
@@ -1740,6 +1838,10 @@ def _get_convert_map(opset):
         'ReduceMean': ReduceMean.get_converter(opset),
         'ReduceProd': ReduceProd.get_converter(opset),
         'ReduceLogSumExp': ReduceLogSumExp.get_converter(opset),
+        'ReduceLogSum': ReduceLogSum.get_converter(opset),
+        'ReduceSumSquare': ReduceSumSquare.get_converter(opset),
+        'ReduceL1': ReduceL1.get_converter(opset),
+        'ReduceL2': ReduceL2.get_converter(opset),
 
         #defs/sorting
         'ArgMax': ArgMax.get_converter(opset),
